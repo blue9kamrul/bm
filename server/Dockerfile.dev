@@ -1,0 +1,42 @@
+FROM node:22-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["sh", "-c", "npx prisma generate && npm run dev"]
+
+
+
+# Commands:
+# 1. Show Images:
+#   docker image ls
+  
+# 2. Show containers
+#   docker ps
+   
+# 3. Build Image:
+#   docker build -t brittoo-server .
+  
+# 4. Run a container:
+#   docker run -p 5000:5000 -d --name britto-server-cnt britto-server
+
+# 5. Delete a running container or container and all associated volumes:
+#   docker rm britto-server-cnt -f
+#   docker rm britto-server-cnt -fv 
+
+# 6. Run by Mounting Volume: host:container
+#   docker run -v $(pwd):/app -p 5000:5000 -d --name britto-server-cnt britto-server
+
+# 7. Mount volume but ignore node_modules - if we dlt node_modules in host.
+#   docker run -v $(pwd):/app -v /app/node_modules -p 5000:5000 -d --name britto-server-cnt britto-server
+
+# 7. Read Only BindMount - we can't create files in dockerbash and sync with host
+#   docker run -v $(pwd):/app:ro -v /app/node_modules -p 5000:5000 -d --name britto-server-cnt britto-server
+
+# 8. Go inside Docker /app dir in Bash:
+#   docker exec -it britto-server bash 

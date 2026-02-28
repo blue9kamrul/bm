@@ -1,0 +1,53 @@
+name: "brittoo"
+
+services:
+
+  client-prod:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8080:80"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+
+
+  server-prod:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.prod
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./server/.env
+    command: npm run start
+    restart: always
+
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=galib
+      - POSTGRES_PASS=galib2010033
+      - POSTGRES_DB=brittoodb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
+    
+    
+
+
+# Commands:
+#   --Up:
+#       $ docker-compose up -d
+#       $ docker image ls
+#   --Down & Delete unnecessary vols. also
+#       $ docker-compose down -v
+#   --Force rebuild - no cache
+#       $ docker-compose up -d --build

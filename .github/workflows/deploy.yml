@@ -1,0 +1,71 @@
+name: Deploy Brittoo to VPS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        password: ${{ secrets.VPS_PASSWORD }}
+        script: |
+          set -e  # Exit on error
+          
+          echo "Starting deployment..."
+          
+          # Load NVM environment
+          echo "Loading NVM..."
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm use node
+          
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          
+          # Navigate to project directory
+          echo "Navigating to project directory..."
+          cd /var/www/brittoo
+          
+          # Update code from repository
+          echo "Stashing local changes (if any)..."
+          git stash
+          
+          echo "Pulling latest code from main branch..."
+          git pull origin main
+          
+          # Build frontend
+          echo "Building frontend..."
+          cd client
+          npm ci
+          npm run build
+          echo "Frontend build completed!"
+          
+          # Install backend dependencies
+          echo "Installing backend dependencies..."
+          cd ../server
+          npm ci
+          echo "Backend dependencies installed!"
+          
+          # Restart services
+          echo "Restarting services..."
+          
+          echo "Reloading nginx..."
+          sudo systemctl reload nginx
+          echo "Nginx reloaded successfully!"
+          
+          echo "Restarting backend with PM2..."
+          pm2 restart brittoo-backend || pm2 start server/index.js --name brittoo-backend
+          
+          # Verify deployment
+          echo "Verifying deployment..."
+          sleep 3
+          pm2 status brittoo-backend
+          
+          echo "Deployment completed successfully!"

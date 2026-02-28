@@ -1,0 +1,42 @@
+Config ✅:
+  9. add Redis config
+
+Prod: 
+
+
+
+--------TEST_TODO VVII:--------
+
+
+TODO:
+  4. Set diff price for ACADEMIC_BOOK category.
+
+PROBLEMS:
+
+
+
+DUMP RESTORES:
+  $ psql -h localhost -U galib -d brittoodb -f brittoodb_2025-09-02_02-00-01.sql
+
+
+
+
+FIX TESTS:
+  1. added quotation in .env in server: client_base_url
+
+
+
+
+FIXED:
+  1. noreply at password reset link mail
+  2. Updated message on pass reset for more clarity
+  3. Update product image upload middleware and add sharp to optimize images to webp converting res to 1200px for faster load
+  4. created new dir /products/optimized keeping original images
+  5. write script to convert all 500+ images to webp optimizing them by sharp
+  6. Update prisma schema add new field optimizedImages and migrate
+  7. seed this with script2 with all data from the new created Dir.
+  8. commit changes to git
+  9. rebuild project and restart nginx, pm2. 
+  10. check logs
+  11. show lazy loading on client for image optimization
+  12. change images to .webp from optimized dir in all the files in client.

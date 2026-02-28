@@ -1,0 +1,62 @@
+name: "brittoo"
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client/src:/app/src
+      - /app/node_modules
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5000:5000"
+      - "5555:5555"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    env_file:
+      - ./server/.env
+    command: npm run dev
+
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=galib
+      - POSTGRES_PASSWORD=galib2723
+      - POSTGRES_DB=brittoodb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
+
+
+## VISIT DB Locally: psql -h localhost -p 5433 -U galib -d brittoodb
+
+# ===========================================
+# DEV COMMANDS (using docker-compose-dev.yml)
+# ===========================================
+
+#   --Up (start in detached mode):
+#       $ docker compose -f docker-compose-dev.yml up -d
+
+#   --List images (confirm image is built):
+#       $ docker image ls
+
+#   --Down & Delete anonymous volumes:
+#       $ docker compose -f docker-compose-dev.yml down -v
+
+#   --Force rebuild from scratch (no cache):
+#       $ docker compose -f docker-compose-dev.yml up -d --build
+
+
+

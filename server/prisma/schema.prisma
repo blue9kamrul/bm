@@ -1,0 +1,534 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String              @id @default(cuid()) @map("id")
+  name                   String              @map("name")
+  email                  String              @unique @map("email")
+  roll                   String              @map("roll")
+  password               String              @map("password")
+  phoneNumber            String?             @map("phone_number")
+  selfie                 String?             @map("selfie")
+  idCardFront            String?             @map("id_card_front")
+  idCardBack             String?             @map("id_card_back")
+  ipAddress              String?             @map("ip_address")
+  latitude               Decimal?            @map("latitude")
+  longitude              Decimal?            @map("longitude")
+  role                   Role                @default(USER) @map("role")
+  emailVerified          Boolean             @default(false) @map("email_verified")
+  isVerified             VerifyStatus        @default(UNVERIFIED) @map("is_verified")
+  brittooVerified        Boolean             @default(false) @map("brittoo_verified")
+  otp                    String?             @map("otp")
+  otpExpiry              DateTime?           @map("otp_expiry")
+  otpSentCount           Int                 @default(0) @map("otp_sent_count")
+  lastOtpSentDate        DateTime?           @map("last_otp_sent_date")
+  securityScore          SecurityScore       @default(MID) @map("security_score")
+  isSuspended            Boolean             @default(false) @map("is_suspended")
+  suspensionCount        Int                 @default(0) @map("suspension_count")
+  suspensionReasons      String[]            @default([]) @map("suspension_reason")
+  createdAt              DateTime            @default(now()) @map("created_at")
+  updatedAt              DateTime            @updatedAt @map("updated_at")
+  deletedAt              DateTime?           @map("deleted_at")
+  isValidRuetMail        Boolean             @default(false) @map("is_valid_ruet_mail")
+  bccTransactions        BccTransaction[]
+  bccWallet              BccWallet?
+  passwordResetToken     PasswordResetToken?
+  rentedOutProducts      Product[]           @relation("ProductsRentedOut")
+  redCacheCredits        RedCacheCredit[]
+  rentalRequestsReceived RentalRequest[]     @relation("RentalRequestsReceived")
+  rentalRequestsMade     RentalRequest[]     @relation("RentalRequestsMade")
+  withdrawalRequests     WithdrawalRequest[]
+  borrowedProducts       Product[]           @relation("ProductsBorrowed")
+
+  // buys
+  purchaseRequestsReceived PurchaseRequest[] @relation("PurchaseRequestsReceived")
+  purchaseRequestsMade     PurchaseRequest[] @relation("PurchaseRequestsMade")
+
+  // chats
+  buyerChats   ChatRoom[] @relation("BuyerChats")
+  sellerChats  ChatRoom[] @relation("SellerChats")
+  sentMessages Message[]
+
+  // notifications
+  pushSubscriptions PushSubscription[]
+  userNotifications UserNotification[]
+
+  @@unique([email, deletedAt])
+  @@index([latitude, longitude])
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @map("id")
+  token     String   @unique @map("token")
+  userId    String   @unique @map("user_id")
+  used      Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("password_reset_tokens")
+}
+
+model SuspensionReason {
+  id String @id @default(cuid()) @map("id")
+}
+
+model BccWallet {
+  id                     String              @id @default(cuid()) @map("id")
+  userId                 String              @unique @map("user_id")
+  availableBalance       Int                 @default(0) @map("available_balance")
+  lockedBalance          Int                 @default(0) @map("locked_balance")
+  requestedForWithdrawal Int                 @default(0) @map("requested_for_withdrawal")
+  createdAt              DateTime            @default(now()) @map("created_at")
+  updatedAt              DateTime            @updatedAt @map("updated_at")
+  deletedAt              DateTime?           @map("deleted_at")
+  bccTransactions        BccTransaction[]
+  user                   User                @relation(fields: [userId], references: [id])
+  rentalRequests         RentalRequest[]
+  withdrawalRequests     WithdrawalRequest[]
+
+  @@map("bcc_wallets")
+}
+
+model BccTransaction {
+  id                String             @id @default(cuid()) @map("id")
+  userId            String             @map("user_id")
+  walletId          String             @map("walllet_id")
+  rentalRequestId   String?            @map("rental_request_id")
+  amount            Int                @map("amount")
+  paymentGateway    PaymentGateway?    @map("payment_gateway")
+  transactionId     String?            @map("transaction_id")
+  numberUsedInTrx   String?            @map("number_used_in_trx")
+  transactionType   BccTransactionType @map("transaction_type")
+  status            BccStatus?         @default(PENDING) @map("status")
+  rejectReason      String?            @map("reject_reason")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  deletedAt         DateTime?          @map("deleted_at")
+  rentalRequest     RentalRequest?     @relation(fields: [rentalRequestId], references: [id])
+  user              User               @relation(fields: [userId], references: [id])
+  wallet            BccWallet          @relation(fields: [walletId], references: [id])
+  WithdrawalRequest WithdrawalRequest?
+
+  @@map("bcc_transactions")
+}
+
+model WithdrawalRequest {
+  id               String           @id @default(cuid()) @map("id")
+  userId           String           @map("user_id")
+  walletId         String           @map("wallet_id")
+  bccTransactionId String?          @unique @map("bcc_transaction_id")
+  withdrawalAmount Int              @map("withdraw_amount")
+  paymentGateway   PaymentGateway   @map("payment_gateway")
+  phoneNumber      String           @map("phone_number")
+  status           WithdrawalStatus @default(PENDING) @map("status")
+  rejectReason     String?          @map("reject_reason")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+  bccTransaction   BccTransaction?  @relation(fields: [bccTransactionId], references: [id])
+  user             User             @relation(fields: [userId], references: [id])
+  wallet           BccWallet        @relation(fields: [walletId], references: [id])
+
+  @@map("withdrawal_requests")
+}
+
+model RedCacheCredit {
+  id              String  @id @default(cuid()) @map("id")
+  amount          Int     @map("amount")
+  inUse           Int     @default(0) @map("in_use")
+  renterId        String? @map("renter_id")
+  userId          String  @map("user_id")
+  sourceProductId String  @unique @map("source_product_id")
+  isFrozen        Boolean @default(false) @map("is_frozen")
+
+  isGiftCredit Boolean   @default(false) @map("is_gift_credit")
+  validityDate DateTime? @map("validity_date")
+  giftedBy     String?   @map("gifted_by")
+  giftReason   String?   @map("gift_reason")
+
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @updatedAt @map("updated_at")
+  deletedAt           DateTime?               @map("deleted_at")
+  sourceProduct       Product                 @relation(fields: [sourceProductId], references: [id])
+  user                User                    @relation(fields: [userId], references: [id])
+  rentalRequestUsages RentalRequestRccUsage[]
+
+  @@map("red_cache_credits")
+}
+
+model Product {
+  id                 String           @id @default(cuid()) @map("id")
+  productSlNo        Int              @default(autoincrement()) @map("product_sl_no")
+  productSL          String           @unique @map("product_sl")
+  name               String           @map("name")
+  pricePerDay        Decimal?         @map("price_per_day")
+  pricePerHour       Decimal?         @map("price_per_hour") //new
+  productImages      String[]         @map("product_images")
+  optimizedImages    String[]         @default([]) @map("optimized_images")
+  productType        ProductType      @map("product_type")
+  productCondition   ProductCondition @map("product_condition")
+  productAge         Int              @map("product_age")
+  omv                Int              @map("omv")
+  secondHandPrice    Int              @map("second_hand_price")
+  tags               String           @map("tags")
+  productDescription String           @map("product_description")
+  quantity           Int              @default(1) @map("quantity")
+  ownerId            String           @map("owner_id")
+  isOnHold           Boolean          @default(false) @map("is_on_hold")
+  holdStartDate      DateTime?        @map("hold_start_date")
+  holdEndDate        DateTime?        @map("hold_end_date")
+  isAvailable        Boolean          @default(true) @map("is_available")
+  isForSaleOnly      Boolean          @default(false) @map("is_for_sale_only")
+
+  askingPrice Int?    @map("asking_price")
+  minPrice    Int?    @map("min_price")
+  isForSale   Boolean @default(false) @map("is_for_sale")
+  isAiEnabled Boolean @default(false) @map("is_ai_enabled")
+  scale       Decimal @default(1.00) @map("scale")
+
+  isRented           Boolean @default(false) @map("is_rented")
+  isBrittooVerified  Boolean @default(false) @map("is_brittoo_verified")
+  holdCreditValidity Int?    @map("hold_credit_validity")
+
+  isVirtual   Boolean @default(false) @map("is_virtual")
+  virtualType String? @map("virtual_type")
+
+  //new
+  latitude  Float? @map("latitude")
+  longitude Float? @map("longitude")
+
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  deletedAt       DateTime?       @map("deleted_at")
+  owner           User            @relation("ProductsRentedOut", fields: [ownerId], references: [id], onDelete: Cascade)
+  redCacheCredits RedCacheCredit?
+  rentalRequests  RentalRequest[]
+  renters         User[]          @relation("ProductsBorrowed")
+
+  //chat
+  chatRooms ChatRoom[]
+
+  purchaseRequests PurchaseRequest[]
+
+  @@unique([ownerId, productSL])
+  @@unique([productSlNo, deletedAt])
+  @@map("products")
+}
+
+model Coupon {
+  id        String   @id @default(cuid()) @map("id")
+  code      String   @unique @map("code")
+  discount  Int      @map("discount")
+  expiresAt DateTime @map("expires_at")
+  isActive  Boolean  @default(true) @map("is_active")
+
+  rentalRequests RentalRequest[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("coupons")
+}
+
+model RentalRequest {
+  id          String  @id @default(cuid()) @map("id")
+  productId   String  @map("product_id")
+  requesterId String  @map("requester_id")
+  ownerId     String  @map("owner_id")
+  bccWalletId String? @map("bcc_wallet_id")
+  couponId    String? @map("coupon_id")
+
+  status              RentalRequestStatus @default(REQUESTED_BY_RENTER) @map("status")
+  rejectReason        String?             @map("reject_reason")
+  brittooRejectReason String?             @map("brittoo_reject_reason")
+  cancelReason        String?             @map("cancel_reason")
+  submissionDeadline  DateTime?           @map("submission_deadline")
+  rentalStartDate     DateTime            @map("rental_start_date")
+  rentalEndDate       DateTime            @map("rental_end_date")
+
+  // new
+  totalDays   Int      @map("total_days")
+  pricePerDay Decimal? @map("price_per_day")
+
+  // new
+  isHourlyRental Boolean  @default(false) @map("is_hourly_rental")
+  totalHours     Int?     @map("total_hours")
+  startingHour   String?  @map("starting_hour")
+  pricePerHour   Decimal? @map("price_per_hour")
+
+  // payment, due
+
+  ownerSubmitMethod          CollectionOrDepositMethod? @map("owner_submit_method")
+  renterCollectionMethod     CollectionOrDepositMethod  @map("renter_collection_method")
+  ownerPhoneNumber           String?                    @map("owner_phone_number")
+  renterPhoneNumber          String                     @map("renter_phone_number")
+  renterDeliveryAddress      String?                    @map("renter_delivery_address")
+  renterPickupTerminal       BrittoTerminal?            @map("pickup_terminal")
+  ownerSubmitAddress         String?                    @map("owner_submit_address")
+  ownerSubmitTerminal        BrittoTerminal?            @map("owner_submit_terminal")
+  renterReturnMethod         CollectionOrDepositMethod? @map("renter_return_method")
+  renterReturnAddress        String?                    @map("renter_return_address")
+  renterReturnTerminal       BrittoTerminal?            @map("renter_return_terminal")
+  ownerReturnReceiveMethod   CollectionOrDepositMethod? @map("owner_return_receive_method")
+  ownerReturnReceiveAddress  String?                    @map("owner_return_receive_address")
+  ownerReturnReceiveTerminal BrittoTerminal?            @map("owner_return_receive_terminal")
+  paidWithRcc                Boolean                    @default(false) @map("paid_with_rcc")
+  paidWithBcc                Boolean                    @default(false) @map("paid_with_bcc")
+  usedBccAmount              Int?                       @map("used_bcc_amount")
+  rccProductSubmitted        Boolean                    @default(false) @map("rcc_product_submitted")
+  createdAt                  DateTime                   @default(now()) @map("created_at")
+  updatedAt                  DateTime                   @updatedAt @map("updated_at")
+  deletedAt                  DateTime?                  @map("deleted_at")
+
+  bccTransactions BccTransaction[]
+  rccUsageDetails RentalRequestRccUsage[]
+  bccWallet       BccWallet?              @relation(fields: [bccWalletId], references: [id])
+  owner           User                    @relation("RentalRequestsReceived", fields: [ownerId], references: [id])
+  product         Product                 @relation(fields: [productId], references: [id])
+  requester       User                    @relation("RentalRequestsMade", fields: [requesterId], references: [id])
+  coupon          Coupon?                 @relation(fields: [couponId], references: [id])
+
+  @@index([ownerId, status])
+  @@index([productId, status])
+  @@map("rental_requests")
+}
+
+model RentalRequestRccUsage {
+  id               String         @id @default(cuid()) @map("id")
+  rentalRequestId  String         @map("rental_request_id")
+  redCacheCreditId String         @map("red_cache_credit_id")
+  usedAmount       Int            @map("used_amount")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  redCacheCredit   RedCacheCredit @relation(fields: [redCacheCreditId], references: [id], onDelete: Cascade)
+  rentalRequest    RentalRequest  @relation(fields: [rentalRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([rentalRequestId, redCacheCreditId])
+  @@map("rental_request_rcc_usage")
+}
+
+model PurchaseRequest {
+  id            String                       @id @default(cuid()) @map("id")
+  productId     String                       @map("product_id")
+  buyerId       String                       @map("buyer_id")
+  sellerId      String                       @map("seller_id")
+  status        PurchaseRequestStatus        @default(REQUESTED_BY_BUYER) @map("status")
+  paymentStatus PurchaseRequestPaymentStatus @default(PENDING) @map("payment_status")
+
+  sellerRejectReason  String? @map("seller_reject_reason")
+  buyerCancelReason   String? @map("buyer_cancel_reasong")
+  brittooRejectReason String? @map("brittoo_reject_reason")
+
+  askingPrice    Int @map("asking_price")
+  dealPrice      Int @map("deal_price")
+  totalPrice     Int @map("total_price") // deal + seller delivery charge + buyer delivery charge
+  platformCharge Int @map("platform_charge")
+
+  buyerCollectionMethod  CollectionOrDepositMethod  @map("buyer_collection_method")
+  sellerDeliveryMethod   CollectionOrDepositMethod? @map("seller_delivery_method")
+  buyerPhoneNumber       String                     @map("buyer_phone_number")
+  sellerPhoneNumber      String                     @map("seller_phone_number")
+  buyerDeliveryAddress   String?                    @map("buyer_delivery_address")
+  buyerPickupTerminal    BrittoTerminal?            @map("buyer_pickup_terminal")
+  sellerDeliveryAddress  String?                    @map("seller_delivery_address")
+  sellerDeliveryTerminal BrittoTerminal?            @map("seller_delivery_terminal")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  seller  User    @relation("PurchaseRequestsReceived", fields: [sellerId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  buyer   User    @relation("PurchaseRequestsMade", fields: [buyerId], references: [id])
+
+  @@map("purchase_requests")
+}
+
+model ChatRoom {
+  id        String   @id @default(cuid()) @map("id")
+  productId String   @map("product_id")
+  buyerId   String   @map("buyer_id")
+  sellerId  String   @map("seller_id")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  product  Product   @relation(fields: [productId], references: [id])
+  buyer    User      @relation("BuyerChats", fields: [buyerId], references: [id])
+  seller   User      @relation("SellerChats", fields: [sellerId], references: [id])
+  messages Message[]
+
+  @@unique([productId, buyerId])
+  @@map("chat_rooms")
+}
+
+model Message {
+  id         String   @id @default(cuid()) @map("id")
+  chatRoomId String   @map("chat_room_id")
+  senderId   String   @map("sender_id")
+  content    String   @map("content")
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  chatRoom ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  sender   User     @relation(fields: [senderId], references: [id])
+
+  @@index([chatRoomId, createdAt])
+  @@map("messages")
+}
+
+// notifications (New)
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  keys      Json // { p256dh: string, auth: string }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+model UserNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  data      Json? // Optional { url: '/path' } for click action
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("user_notifications")
+}
+
+model SentNotification {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  targets   String // 'all' or comma-separated userIds/emails
+  createdAt DateTime @default(now())
+
+  @@map("sent_notifications")
+}
+
+enum PurchaseRequestStatus {
+  REQUESTED_BY_BUYER
+  CANCELLED_BY_BUYER
+  ACCEPTED_BY_SELLER
+  REJECTED_BY_SELLER
+  REJECTED_FROM_BRITTOO
+  PRODUCT_SUBMITTED_BY_SELLER
+  PRODUCT_COLLECTED_BY_BUYER
+}
+
+enum PurchaseRequestPaymentStatus {
+  PENDING
+  COMPLETED
+}
+
+enum VerifyStatus {
+  UNVERIFIED
+  VERIFIED
+  PENDING
+  REJECTED
+  BLOCKED
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum SecurityScore {
+  VERY_LOW
+  LOW
+  MID
+  HIGH
+  VERY_HIGH
+}
+
+enum BccTransactionType {
+  RENT_DEPOSIT
+  DEPOSIT_REFUND
+  BONUS_CREDIT
+  PURCHASE_BCC
+  MONEY_WITHDRAWAL
+  ADJUSTMENT
+}
+
+enum BccStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum PaymentGateway {
+  BKASH
+  NAGAD
+  ROCKET
+}
+
+enum WithdrawalStatus {
+  PENDING
+  REJECTED
+  COMPLETED
+}
+
+enum BrittoTerminal {
+  CSE_1
+  ADMIN_1
+  BANGABANDHU_HALL_1
+  ZIA_HALL_1
+  LIBRARY_1
+}
+
+enum ProductType {
+  GADGET
+  FURNITURE
+  VEHICLE
+  STATIONARY
+  MUSICAL_INSTRUMENT
+  CLOTHING
+  BOOK
+  ACADEMIC_BOOK
+  ELECTRONICS
+  APARTMENTS
+  OTHERS
+}
+
+enum ProductCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum CollectionOrDepositMethod {
+  BRITTOO_TERMINAL
+  HOME
+}
+
+enum RentalRequestStatus {
+  REQUESTED_BY_RENTER
+  CANCELLED_BY_RENTER
+  ACCEPTED_BY_OWNER
+  REJECTED_BY_OWNER
+  REJECTED_FROM_BRITTOO
+  PRODUCT_SUBMITTED_BY_OWNER
+  PRODUCT_COLLECTED_BY_RENTER
+  PRODUCT_RETURNED_BY_RENTER
+  PRODUCT_RETURNED_TO_OWNER
+}
